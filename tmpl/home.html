@@ -4,44 +4,39 @@
     <title>My Template</title>
 </head>
 <body>
-    <h1>Dog page!</h1>
-    <button id="fetch-breeds-list">click me!</button>
-    <button id="fetch-random-image">click me!</button>
-    <!-- TODO: Add image of dog or list of breeds -->
-    {{if ne .ImageURL ""}}
-    <table>
-        <tr>
-            <td>Testing:</td>
-            <td>{{.ImageURL}}</td>
-        </tr>
-    </table>
-    {{end}}
+    <div id="content-container">
+        <div>
+            <h1>Dog page!</h1>
+            <button id="fetch-breeds-list">List of breeds</button>
+            <button id="fetch-random-image">Random dog!</button>
+        </div>
+        <!-- TODO: Add image of dog or list of breeds -->
+        <div style="padding-top: 30px;">
+            {{if ne .ImageURL ""}}
+            <img style="max-width: 100%; height: auto;" src="{{.ImageURL}}" alt="Girl in a jacket" width="auto" height="auto">
+            {{end}}
+            {{if ne .BreedList nil}}
+            <div>
+                <h2>List of dog breeds found in dog API</h2>
+                <ul>
+                {{range $key, $value := .BreedList}}
+                    <li>{{ $key }}
+                        {{if $value}}
+                        <ul>
+                        {{range $index, $element := $value}}
+                            <li>
+                                {{$element}}
+                            </li>
+                        {{end}}
+                        </ul>
+                        {{end}}
+                    </li>
+                {{end}}
+                </ul>
+            </div>
+            {{end}}
+        </div>
+    </div>
+    <script src="/static/main.js"></script>
 </body>
 </html>
-
-<script>
-    const fetchBreedsButton = document.getElementById('fetch-breeds-list');
-    const fetchRandomImageButton = document.getElementById('fetch-random-image');
-
-    fetchBreedsButton.addEventListener('click', async () => {
-        const response = await fetch('/handle-fetch-breeds-button-click', { method: 'POST' });
-        if (response.ok) {
-            console.log('Success!')
-        } else {
-            console.log('something went wrong!')
-        }
-    });
-
-    fetchRandomImageButton.addEventListener('click', async () => {
-        const response = await fetch('/handle-random-image-button-click', { method: 'POST' });
-        if (response.ok) {
-            const pageContent = await response.text();
-            const parser = new DOMParser();
-            const newDocument = parser.parseFromString(pageContent, 'text/html');
-            document.documentElement.innerHTML = newDocument.documentElement.innerHTML;
-        } else {
-            // TODO: Handle errors
-            console.log('something went wrong!')
-        }
-    });
-</script>
