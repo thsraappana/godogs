@@ -12,14 +12,17 @@ import (
 )
 
 const (
-	FetchImages = "fetchImg"
-	FetchBreeds = "fetchBreeds"
+	FetchRandImg  = "fetchRandImg"
+	FetchBreeds   = "fetchBreeds"
+	FetchBreedImg = " fetchBreedImg"
 )
 
 type Page struct {
-	Title     string
-	BreedList map[string][]string
-	ImageURL  string
+	Title        string
+	BreedList    map[string][]string
+	ImageURL     string
+	Error        bool
+	ErrorMessage string
 }
 
 type Response struct {
@@ -32,7 +35,7 @@ func fetch(endpoint string) ([]byte, error) {
 	client := &http.Client{}
 
 	// create a GET request
-	req, err := http.NewRequest("GET", "https://dog.ceo/api/breeds"+endpoint, nil)
+	req, err := http.NewRequest("GET", "https://dog.ceo/api"+endpoint, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -52,20 +55,29 @@ func fetch(endpoint string) ([]byte, error) {
 	return body, err
 }
 
-func (p *Page) fetchImage() (string, error) {
-	body, err := fetch("/image/random")
+func (p *Page) fetchImage(breed string) (string, error) {
+	var endpoint string
+	if len(breed) == 0 {
+		endpoint = "/breeds/image/random"
+	} else {
+		endpoint = "/breed/" + breed + "/images/random"
+	}
+	body, err := fetch(endpoint)
+	if err != nil {
+		fmt.Println("error in image fetch")
+		return "", err
+	}
 
 	var data Response
 	err = json.Unmarshal(body, &data)
 	if err != nil {
 		panic(err)
 	}
-
-	return data.Message, err
+	return data.Message, nil
 }
 
 func (p *Page) fetchList() (map[string][]string, error) {
-	body, _ := fetch("/list/all")
+	body, _ := fetch("/breeds/list/all")
 
 	breedMap := make(map[string][]string)
 
@@ -110,7 +122,7 @@ func (p *Page) fetchList() (map[string][]string, error) {
 var templates = template.Must(template.ParseFiles("tmpl/home.html"))
 
 func home(w http.ResponseWriter, r *http.Request) {
-	page := Page{"Dog app with Go!", nil, ""}
+	page := Page{"Dog app with Go!", nil, "", false, ""}
 
 	err := templates.ExecuteTemplate(w, "home.html", page)
 	if err != nil {
@@ -134,9 +146,30 @@ func eventHandler(eventType string) http.HandlerFunc {
 		case FetchBreeds:
 			breedMap, _ := page.fetchList()
 			page.BreedList = breedMap
-		case FetchImages:
-			img, _ := page.fetchImage()
+		case FetchRandImg:
+			img, _ := page.fetchImage("")
 			page.ImageURL = img
+		case FetchBreedImg:
+			// read the body of the request
+			body, err := ioutil.ReadAll(r.Body)
+			if err != nil {
+				http.Error(w, "Error reading request body", http.StatusInternalServerError)
+				return
+			}
+			// unmarshal the body data to read the values
+			var breedData map[string]interface{}
+			err = json.Unmarshal([]byte(string(body)), &breedData)
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
+			data, err := page.fetchImage(breedData["breed"].(string))
+			if data == "Breed not found (master breed does not exist)" {
+				page.Error = true
+				page.ErrorMessage = data
+			} else {
+				page.ImageURL = data
+			}
 		}
 
 		err := templates.ExecuteTemplate(w, "home.html", page)
@@ -154,8 +187,9 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	http.HandleFunc("/", home)
-	http.HandleFunc("/handle-fetch-breeds-button-click", eventHandler(FetchBreeds))
-	http.HandleFunc("/handle-random-image-button-click", eventHandler(FetchImages))
+	http.HandleFunc("/fetch-breeds", eventHandler(FetchBreeds))
+	http.HandleFunc("/fetch-random-image", eventHandler(FetchRandImg))
+	http.HandleFunc("/fetch-breed-image", eventHandler(FetchBreedImg))
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

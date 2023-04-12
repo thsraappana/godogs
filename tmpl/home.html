@@ -2,16 +2,25 @@
 <html>
 <head>
     <title>My Template</title>
+    <link rel="stylesheet" href="/static/home.css">
 </head>
 <body>
-    <div id="content-container">
+    <div id="page-container">
         <div>
             <h1>Dog page!</h1>
-            <button id="fetch-breeds-list">List of breeds</button>
-            <button id="fetch-random-image">Random dog!</button>
+            <div class="btn-container">
+                <button class="margin-bottom-small" id="fetch-breeds-list">List of breeds</button>
+                <button class="margin-top-small margin-bottom-small" id="fetch-random-image">Random dog!</button>
+                <div class="margin-top-small">
+                    <input type="text" placeholder="breed" id="dog-breed" name="dog-breed">
+                    <button id="fetch-dog-breed-image">Get this breed!</button>
+                </div>
+            </div>
         </div>
-        <!-- TODO: Add image of dog or list of breeds -->
-        <div style="padding-top: 30px;">
+        <div class="content-container">
+            {{ if ne .Error false }}
+            <p>{{ .ErrorMessage }}</p>
+            {{ end }}
             {{if ne .ImageURL ""}}
             <img style="max-width: 100%; height: auto;" src="{{.ImageURL}}" alt="Girl in a jacket" width="auto" height="auto">
             {{end}}
